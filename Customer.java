@@ -9,6 +9,8 @@ public class Customer {
     private int scanTimePerItem;
     private int payTime;
 
+    //constructor
+
      // Setters
      public void setItem(int item) {
         this.item = item;
@@ -81,5 +83,19 @@ public class Customer {
 
     public void calculateFinishTime(){
         this.finishTime = this.arrivalTime + this.timeWaitInLine + this.checkoutTime;
+    }
+    
+    @Override
+    public String toString() {
+        return "Customer{" +
+                "items=" + item +
+                ", arrivalTime=" + arrivalTime +
+                ", lineIn=" + lineIn +
+                ", waitTime=" + timeWaitInLine +
+                ", checkoutTime=" + checkoutTime +
+                ", finishTime=" + finishTime +
+                ", scanTimePerItem=" + scanTimePerItem +
+                ", payTime=" + payTime +
+                '}';
     }
 }
