@@ -2,7 +2,6 @@
 public class Customer {
     private int item;
     private int arrivalTime;
-    private int lineIn;
     private int timeWaitInLine; 
     private int checkoutTime;
     private int finishTime;
@@ -20,9 +19,6 @@ public class Customer {
         this.arrivalTime = arrivalTime;
     }
 
-    public void setLineIn(int lineIn) {
-        this.lineIn = lineIn;
-    }
 
     public void setTimeWaitInLine(int timeWait) {
         this.timeWaitInLine = timeWait;
@@ -51,10 +47,6 @@ public class Customer {
 
     public int getArrivalTime() {
         return arrivalTime;
-    }
-
-    public int getLineIn() {
-        return lineIn;
     }
 
     public int getTimeWaitInLine() {
@@ -90,7 +82,6 @@ public class Customer {
         return "Customer{" +
                 "items=" + item +
                 ", arrivalTime=" + arrivalTime +
-                ", lineIn=" + lineIn +
                 ", waitTime=" + timeWaitInLine +
                 ", checkoutTime=" + checkoutTime +
                 ", finishTime=" + finishTime +

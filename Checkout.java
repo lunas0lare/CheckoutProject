@@ -1,7 +1,17 @@
 import java.util.ArrayList;
 import java.util.Random;
 public class Checkout {
-    public static void setupSystem(int model, ArrayList<Queue<Customer>> lines, ArrayList<Station> stations,int numLines, int numStations){
+
+    static final int SECONDS_RUN = 7200;
+    static final int ARRIVAL_CHANCE = 30;
+    static final int LEAST_ITEM = 10;
+    static final int MOST_ITEM = 40;
+    static final int SCAN_TIME = 5;
+    static final int FASTEST_PAY_TIME = 20;
+    static final int SLOWEST_PAY_TIME = 40;
+    static final int[] MODEL = {1, 2, 3};
+
+    public static void setupSystem(int model, ArrayList<Queue<Customer>> lines, ArrayList<Station> stations,int numLines){
         
         if(model != 1){
             for(int i = 0; i < numLines; i++){
@@ -48,30 +58,33 @@ public class Checkout {
         }
     }
 
+    public static int getLineLength(ArrayList<Queue<Customer>> lines){
+       int max = 0;
+        for(Queue<Customer> line : lines){
+            if(line.size() > max)
+                max = line.size();
+        }
+        return max;
+    }
     public static void main(String[] args) {
-    final int SECONDS_RUN = 7200;
-    final int ARRIVAL_CHANCE = 30;
-    final int LEAST_ITEM = 5;
-    final int MOST_ITEM = 20;
-    final int SCAN_TIME = 3;
-    final int FASTEST_PAY_TIME = 3;
-    final int SLOWEST_PAY_TIME = 10;
-    final int[] MODEL = {1, 2, 3};
-    ArrayList<Customer> servedCustomer = new ArrayList<>(); 
+
     ArrayList<Station> stations = new ArrayList<>();
     ArrayList<Queue<Customer>> lines = new ArrayList<>();
     Random rand = new Random();
+    int modelPicked = MODEL[0];
+    int maxLineLength = -1;
     
-    setupSystem(MODEL[1],lines, stations, 5, 5);
+    setupSystem(modelPicked,lines, stations, 5);
     
     for(int tick = 0; tick < SECONDS_RUN; tick++){
         //start ticking for each station.
-         int resultPositionLinePicked = pickLine(MODEL[1], lines, rand);
+        int resultPositionLinePicked = pickLine(modelPicked, lines, rand);
         for(Station station : stations){
             station.tick(tick);
         }
         //rand(30) == 0 means 1 in 30 chances there's a 0.
         //-> at least 1 person in 30 sec
+        
         if(rand.nextInt(ARRIVAL_CHANCE) == 0){
             Customer newCustomer = new Customer();
             newCustomer.setItem(rand.nextInt(MOST_ITEM - LEAST_ITEM) + LEAST_ITEM);
@@ -85,29 +98,42 @@ public class Checkout {
             lines.get(resultPositionLinePicked).enqueue(newCustomer);
             
         }
+        
+        if(modelPicked == 1){
+            Queue<Customer> sharedLine = lines.get(0);
+            
+            for(Station station : stations){
+                if(!station.getIsAvailable()) continue;
 
-        for(int i = 0; i < stations.size(); i++){
-            Station station = stations.get(i);
-            Queue<Customer> line = lines.get(i);
-            if(station.getIsAvailable() && !line.isEmpty()){
-                Customer curCustomer = line.peek();
-                int waitTime = curCustomer.getFinishTime() -curCustomer.getCheckoutTime() - curCustomer.getArrivalTime();
-                station.setCurCustomer(line.dequeue());
-                station.getCurCustomer().setTimeWaitInLine(waitTime);
-                station.setIsAvailable(false);
-                servedCustomer.add(station.getCurCustomer());
-            }          
+                if(!sharedLine.isEmpty()){
+                    Customer curCustomer = sharedLine.peek();
+                    int waitTime = curCustomer.getFinishTime() - curCustomer.getCheckoutTime() - curCustomer.getArrivalTime();
+                    station.setCurCustomer(sharedLine.dequeue());
+                    station.getCurCustomer().setTimeWaitInLine(waitTime);
+                    station.setIsAvailable(false);
+                }
+            }
         }
+        else{
+            for(int i = 0; i < stations.size(); i++){
+                Station station = stations.get(i);
+                Queue<Customer> line = lines.get(i);
+                if(station.getIsAvailable() && !line.isEmpty()){
+                    Customer curCustomer = line.peek();
+                    int waitTime = curCustomer.getFinishTime() -curCustomer.getCheckoutTime() - curCustomer.getArrivalTime();
+                    station.setCurCustomer(line.dequeue());
+                    station.getCurCustomer().setTimeWaitInLine(waitTime);
+                    station.setIsAvailable(false);
+                }          
+            }
+        }
+    maxLineLength = Math.max(maxLineLength, getLineLength(lines));
     }
 
-    // for(Customer customer : servedCustomer){
-    //     System.out.println(customer);
+    // for(Station station : stations){
+    //     System.out.println(station + "\n");
     // }
-
-    // System.out.println(Station.getTotalCustomerServed());
-
-    for(Station station : stations){
-        System.out.println(station + "\n");
-    }
+    System.out.println(Station.getTotalCustomerServed());
+    System.out.println(maxLineLength);
     }
 }
