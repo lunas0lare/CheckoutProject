@@ -40,6 +40,10 @@ public class Station {
         return totalCustomerServed;
     }
 
+    public static void resetTotalCustomerServed() {
+        totalCustomerServed = 0;
+    }
+    
     public int getNumCustomerServed() {
         return customerServed;
     }
@@ -50,20 +54,6 @@ public class Station {
     
     public int getTimeRemaining() {
         return timeRemaining;
-    }
-
-    private void calTimeRemaining(int tick){
-        this.timeRemaining = curCustomer.getFinishTime() - tick;
-    }
-    public void tick(int tick){
-        if(!this.isAvailable){
-            calTimeRemaining(tick);
-        }
-        if(this.timeRemaining <= 0){
-            
-            this.isAvailable = true;
-            this.curCustomer = null;
-        }
     }
 
     @Override

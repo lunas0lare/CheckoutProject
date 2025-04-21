@@ -89,4 +89,16 @@ public class Customer {
                 ", payTime=" + payTime +
                 '}';
     }
+
+    @Override
+    public Customer clone(){
+        Customer copy = new Customer();
+        copy.setItem(this.item);
+        copy.setArrivalTime(this.arrivalTime);
+        copy.setScanTimePerItem(this.scanTimePerItem);
+        copy.setPayTime(this.payTime);
+        copy.calculateCheckoutTime();
+        copy.calculateFinishTime();
+        return copy;
+    }
 }
