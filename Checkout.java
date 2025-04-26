@@ -12,6 +12,7 @@ public class Checkout {
     static final int SLOWEST_PAY_TIME = 10;
     static final int[] MODEL = {1, 2, 3};
     static final int NUM_LINE = 5;
+    static final int NUM_SIM = 10;
     static Random rand = new Random();
     
 
@@ -106,8 +107,10 @@ public class Checkout {
     ArrayList<Station> stations = new ArrayList<>();
     ArrayList<Queue<Customer>> lines = new ArrayList<>();
    
-    int maxLineLength;
-    int totalWaitTime;
+    int maxLineLength = 0;
+    int totalWaitTime = 0;
+    double[] averageWaitTime = {0, 0, 0};
+    double[] averageCustomerServed = {0, 0, 0};
     //get number of customer created
     final int NUM_CUSTOMERS = SECONDS_RUN / ARRIVAL_INTERVAL;
    
@@ -123,92 +126,72 @@ public class Checkout {
         originalCustomers.add(c);
     }
 
-for(int modelPicked : MODEL){
-    //loop through models
-    //because we loop through models in the main, we have to clean a data  before go to the next model.
-    lines.clear();
-    stations.clear();
-
-    setupSystem(modelPicked,lines, stations, NUM_LINE);
-    Station.resetTotalCustomerServed();
-    maxLineLength = -1;
-    totalWaitTime = 0;
-
-    //clone customer list
-    ArrayList<Customer> customers = cloneCustomerList(originalCustomers);
-    //use index to access the arraylist, reset after each model
-    int customerIndex = 0;
-
-    for(int tick = 0; tick < SECONDS_RUN; tick++){
-         //start ticking for each station.
-         //this model is tick based, so it run on ticks when the model doesn't have anything to do.
-         //event-based model with jump to the tick that station is available or customer arrive.
-         
-         //for function check each station avalability: if station is busy then decrement each second
-         //until the station remaining time(the time remaining when customer finish checking) is 0 then it is available again
-         for(Station station : stations){
-             if(!station.getIsAvailable()){
-                 station.setTimeRemaining(station.getTimeRemaining() - 1);
-                 if(station.getTimeRemaining() <= 0){
-                     station.setIsAvailable(true);
-                 }
-             }
-         }
-         
+    double[] max = {0, 0, 0};
+    //----------MAIN CODE----------
+    for(int modelPicked : MODEL){
+        for(int run_num = 0; run_num < NUM_SIM; run_num++){
+            lines.clear();
+            stations.clear();
+            setupSystem(modelPicked, lines, stations, NUM_LINE);
+            Station.resetTotalCustomerServed();
+            maxLineLength = -1;
+            totalWaitTime = 0;
+            ArrayList<Customer> customers = cloneCustomerList(originalCustomers);
+            int customerIndex = 0;
+    
+            for(int tick = 0; tick < SECONDS_RUN; tick++){
+                for(Station station : stations){
+                    if(!station.getIsAvailable()){
+                        station.setTimeRemaining(station.getTimeRemaining() - 1);
+                        if(station.getTimeRemaining() <= 0){
+                            station.setIsAvailable(true);
+                        }
+                    }
+                }
+    
+                if(tick % ARRIVAL_INTERVAL == 0){
+                    Customer newCustomer = customers.get(customerIndex++);
+                    int resultPositionLinePicked = pickLine(modelPicked, lines, rand);
+                    lines.get(resultPositionLinePicked).enqueue(newCustomer);
+                }
+    
+                if(modelPicked == 1){
+                    Queue<Customer> sharedLine = lines.get(0);
+                    for(Station station : stations){
+                        if(!station.getIsAvailable()) continue;
+                        if(!sharedLine.isEmpty()){
+                            Customer curCustomer = sharedLine.dequeue();
+                            stationProcess(station, curCustomer, tick);
+                            int waitTime = tick - curCustomer.getArrivalTime();
+                            totalWaitTime += waitTime;
+                        }
+                    }
+                } else {
+                    for(int i = 0; i < stations.size(); i++){
+                        Station station = stations.get(i);
+                        Queue<Customer> line = lines.get(i);
+                        if(station.getIsAvailable() && !line.isEmpty()){
+                            Customer curCustomer = line.dequeue();
+                            stationProcess(station, curCustomer, tick);
+                            int waitTime = tick - curCustomer.getArrivalTime();
+                            totalWaitTime += waitTime;
+                        }
+                    }
+                }
+    
+                maxLineLength = Math.max(maxLineLength, getLineLength(lines));
+            }
+    
+            max[modelPicked - 1] += maxLineLength;
+            averageWaitTime[modelPicked - 1] += (double)totalWaitTime / Station.getTotalCustomerServed();
+            averageCustomerServed[modelPicked - 1] += Station.getTotalCustomerServed();
+        }
+    
         
-         //customer arrive every 30 second. 
-         if(tick % ARRIVAL_INTERVAL == 0){
-            Customer newCustomer = customers.get(customerIndex++);
-             //calculate line picked based on model pick, see function for details.
-             int resultPositionLinePicked = pickLine(modelPicked, lines, rand);
-             //put a customer in a picked queue.
-             lines.get(resultPositionLinePicked).enqueue(newCustomer);
-            
-         }
-         
-         if(modelPicked == 1){
-             Queue<Customer> sharedLine = lines.get(0);
-             
-             //loop through each station, check available station to jump in, then if the
-             //line is not empty then process the customer
-             for(Station station : stations){
-                 if(!station.getIsAvailable()) continue;
-                 if(!sharedLine.isEmpty()){
-                     //move a customer from a line to the station
-                     Customer curCustomer = sharedLine.dequeue();
-                     stationProcess(station, curCustomer, tick);
-                     int waitTime =  tick - curCustomer.getArrivalTime();
-                     totalWaitTime += waitTime;
-                 }
-             }
-         }
-         else{
-             for(int i = 0; i < stations.size(); i++){
-                 //because model 2 and 3 have the same num station and queue
-                 Station station = stations.get(i);
-                 Queue<Customer> line = lines.get(i);
-                 if(station.getIsAvailable() && !line.isEmpty()){
-                     //move a customer from a line to the station
-                     Customer curCustomer = line.dequeue();
-                     stationProcess(station, curCustomer, tick);
-                     int waitTime =  tick - curCustomer.getArrivalTime();
-                     totalWaitTime += waitTime;
-                 }          
-             }
-     }
-         //calculate max line lenth
-     maxLineLength = Math.max(maxLineLength, getLineLength(lines));
- 
-     // for(Station station : stations){
-     //     System.out.println(station + "\n");
-     // }
+        System.out.println("Model " + modelPicked + ":");
+        System.out.println("Average customer served: " + (averageCustomerServed[modelPicked - 1] / NUM_SIM));
+        System.out.println("Average line length: " + (max[modelPicked - 1] / NUM_SIM));
+        System.out.println("Average wait time: " + (averageWaitTime[modelPicked - 1] / NUM_SIM) + "\n");
     }
-    double averageWaitTime = (double)totalWaitTime / Station.getTotalCustomerServed();
-    System.out.println("total customer served: " + Station.getTotalCustomerServed());
-    System.out.println("Max line length: " + maxLineLength);
-    System.out.println("average wait time: " + averageWaitTime + "\n");
-    
-    
- }
 }
 }
